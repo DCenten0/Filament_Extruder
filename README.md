@@ -1,5 +1,6 @@
-# Recyclable Filament Extruder
-<img src="https://github.com/DavidSantana872/Filament_Extruder/blob/main/img_logo.png" aling="center">
+<h1>Recyclable Filament Extruder</h1>
+
+<img src="https://user-images.githubusercontent.com/101992463/221448465-b78ce6a4-7c4e-47a2-9327-569ec5b8c882.png" aling="center">
 <p>The recyclable filament extruder project focuses on designing a system for the production of 3D printing filament using recycled materials. This system allows for the reuse of materials that would otherwise be wasted.</p>
 
 
@@ -10,3 +11,5 @@ Here.</a></p>
 
 <p>You can use the arduino code freely and without limitations. If you want to see the code go <a href="https://github.com/DavidSantana872/Filament_Extruder/blob/main/Code/main.ino" title="Code">
 Here.</a></p>
+
+
