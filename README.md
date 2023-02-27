@@ -10,4 +10,3 @@ Here.</a></p>
 
 <p>You can use the arduino code freely and without limitations. If you want to see the code go <a href="https://github.com/DavidSantana872/Filament_Extruder/blob/main/Code/main.ino" title="Code">
 Here.</a></p>
-hola
