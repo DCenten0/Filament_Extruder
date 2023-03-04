@@ -6,7 +6,7 @@
  *         Daniel Centeno
  *         David Santana
  * 
- * Version: 1.1.0
+ * Version: 1.1.2
  *
  * Pin used:
  *
@@ -52,17 +52,10 @@
 #include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
 #include <AccelStepper.h>
+#include <math.h>
 
 //Display configuration
-//LiquidCrystal_I2C lcd(0x3c,16,2); //0x3F  0x27  0x20  0x3c
-
-#include <Wire.h>
-#include "DFRobot_LCD.h"
-  const int colorR = 255;
-  const int colorG = 0;
-  const int colorB = 0;
-DFRobot_LCD lcd(16,2);  //16 characters and 2 lines of show
-
+LiquidCrystal_I2C lcd(0x27,16,2); //0x3F  0x27  0x20  0x3c
 
 //Keypad configuration
 const int row_num = 4;
@@ -89,12 +82,12 @@ int set_temperature = 200;
 // Variable to get the temperature
 int temperature = 0;
 
-//Values to calculate temperature 
-const int pinTermistor = A0; // número de pin analógico del termistor
-const int Rfixed = 10000; // resistencia fija en ohmios
-const float T0 = 25; // temperatura nominal del termistor en grados Celsius
-const float B = 3950; // constante de temperatura del termistor
-const float R0 = 100000; // resistencia nominal del termistor a la temperatura nominal T0
+// Definir constantes
+const int TERMISTOR_PIN = A0;
+const float R_FIXED = 10000.0;   // Resistencia en serie con el termistor
+const float NOMINAL_RESISTANCE = 100000.0;  // Resistencia nominal del termistor
+const float NOMINAL_TEMP = 25.0;  // Temperatura nominal del termistor
+const float B_COEFFICIENT = 3950.0; // Coeficiente beta del termistor
 
 //*********************************************************************************************************************************
 // PID Values
@@ -132,18 +125,18 @@ int In1 = 15;
 int In2 = 16;
 int LedOn = 1;
 int LedOff = 0;
+bool flag = true;
 
 //************************************************************************************************************************************
 
 void setup()
 {  
+ 
+  //Initialize LCD and Turn on background light
   lcd.init();
-  // Turn on background light
-  //lcd.backlight();
+  lcd.backlight();
 
-  lcd.setRGB(colorR, colorG, colorB);//If the module is a monochrome screen, you need to shield it
-  
-  //Serial.begin(9600);
+  //Initialize the Wire
   Wire.begin();
 
   //Motor setup configuration
@@ -250,23 +243,39 @@ void function_state(){
 void function_information(){
     
     while(1){
-        TECLA = teclado.getKey();
-        lcd.setCursor(0,0);
-        lcd.print("Temp: "); lcd.print(analogRead(temperature)); lcd.print("/"); lcd.print(set_temperature);
-        lcd.setCursor(0,1);
 
-        MotorSpeedPercentage = map(motorSpeed, 0, 1000, 0, 100);
+      int amount = floor(log10(MotorSpeedPercentage)) + 1;
+
+      if(amount == 2 && flag == true){
+        flag = false;
+        lcd.clear();
+      }
+      else if(amount == 1 && flag == false){
+        flag = true;
+        lcd.clear();
+      }
+      else if(amount == 3){
+        flag = true;
+      }
+
+      
+      TECLA = teclado.getKey();
+      lcd.setCursor(0,0);
+      lcd.print("Temp: "); lcd.print(temperature); lcd.print("/"); lcd.print(set_temperature);
+      lcd.setCursor(0,1);
+
+      MotorSpeedPercentage = map(motorSpeed, 0, 1000, 0, 100);
         
-        lcd.print("Velocity: "); lcd.print(MotorSpeedPercentage); lcd.print("%"); 
+      lcd.print("Velocity: "); lcd.print(MotorSpeedPercentage); lcd.print("%"); 
 
-        // Agregar pines a leer para mostrar la informacion     
+      // Agregar pines a leer para mostrar la informacion     
 
-        if(TECLA == 'D'){
-            lcd.clear();
-            break;
-        }
+      if(TECLA == 'D'){
+          lcd.clear();
+          break;
+      }
 
-        start_Off();
+      start_Off();
 
     }
 }
@@ -308,15 +317,22 @@ void start_Off(){
   stepper.setSpeed(motorSpeed);
   stepper.runSpeed();
 
-  //Calcular temperatura del termistor 
-  // Leer el valor de la resistencia del termistor
-  int lectura = analogRead(pinTermistor);
-  float Rterm = Rfixed / (1023.0 / lectura - 1.0);
+  // Leer el valor del termistor
+  int reading = analogRead(TERMISTOR_PIN);
+
+  // Calcular la resistencia del termistor
+  float voltage = reading * 5.0 / 1023.0;
+  float resistance = R_FIXED * (5.0 / voltage - 1.0);
 
   // Calcular la temperatura
-  float lnR = log(Rterm/R0);
-  float invT = 1.0/T0 + (1.0/B)*lnR;
-  temperature = 1.0/invT - 273.15;
+  float steinhart;
+  steinhart = resistance / NOMINAL_RESISTANCE;  // (R/Ro)
+  steinhart = log(steinhart);                  // ln(R/Ro)
+  steinhart /= B_COEFFICIENT;                   // 1/B * ln(R/Ro)
+  steinhart += 1.0 / (NOMINAL_TEMP + 273.15);    // + (1/To)
+  steinhart = 1.0 / steinhart - 273.15;          // Invertir y convertir a Celsius
+
+  temperature = steinhart;
   
 
   if (state == true)
